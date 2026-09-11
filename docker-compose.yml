@@ -1,0 +1,64 @@
+version: '3.9'
+name: enlighted-infrastructure
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: enlighted
+      APP_ADMIN_PASSWORD: ${APP_ADMIN_PASSWORD:-app_admin_dev_password}
+      APP_READWRITE_PASSWORD: ${APP_READWRITE_PASSWORD:-app_readwrite_dev_password}
+      APP_READONLY_PASSWORD: ${APP_READONLY_PASSWORD:-app_readonly_dev_password}
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrations:
+    build:
+      context: ../enlighted-migrations
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://app_admin:${APP_ADMIN_PASSWORD:-app_admin_dev_password}@db:5432/enlighted?sslmode=disable
+      MIGRATIONS_PATH: 'file:///app/migrations'
+      SEED_PATH: '/app/seed/seed.sql'
+
+  products:
+    build:
+      context: ../enlighted-products
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      PORT: '9090'
+      DATABASE_URL: postgres://app_readonly:${APP_READONLY_PASSWORD:-app_readonly_dev_password}@db:5432/enlighted?sslmode=disable
+    command: ["/app/bin/server"]
+
+  app:
+    build:
+      context: ../enlighted-api
+    depends_on:
+      products:
+        condition: service_started
+    environment:
+      PORT: '8000'
+      PRODUCTS_SERVICE_ADDR: 'products:9090'
+      FRONTEND_ORIGIN: 'http://localhost:5173'
+    ports:
+      - '8000:8000'
+    command: ["/app/bin/server"]
+
+volumes:
+  pgdata:
