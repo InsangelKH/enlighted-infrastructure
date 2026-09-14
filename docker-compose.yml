@@ -30,7 +30,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://app_admin:${APP_ADMIN_PASSWORD:-app_admin_dev_password}@db:5432/enlighted?sslmode=disable
-      MIGRATIONS_PATH: 'file:///app/migrations'
+      MIGRATIONS_PATH: '/app/migrations'
       SEED_PATH: '/app/seed/seed.sql'
 
   products:

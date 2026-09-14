@@ -19,6 +19,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     \$\$;
 
     GRANT CONNECT ON DATABASE "$POSTGRES_DB" TO app_admin, app_readwrite, app_readonly;
+    GRANT CREATE ON DATABASE "$POSTGRES_DB" TO app_admin;
 
     GRANT CREATE, USAGE ON SCHEMA public TO app_admin;
     GRANT USAGE ON SCHEMA public TO app_readwrite, app_readonly;
