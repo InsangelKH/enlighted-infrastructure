@@ -46,15 +46,34 @@ services:
       DATABASE_URL: postgres://app_readonly:${APP_READONLY_PASSWORD:-app_readonly_dev_password}@db:5432/enlighted?sslmode=disable
     command: ["/app/bin/server"]
 
+  users:
+    build:
+      context: ../enlighted-users
+    depends_on:
+      db:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    environment:
+      PORT: '9091'
+      DATABASE_URL: postgres://app_readwrite:${APP_READWRITE_PASSWORD:-app_readwrite_dev_password}@db:5432/enlighted?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
+      PRODUCTS_SERVICE_ADDR: 'products:9090'
+    command: ["/app/bin/server"]
+
   app:
     build:
       context: ../enlighted-api
     depends_on:
       products:
         condition: service_started
+      users:
+        condition: service_started
     environment:
       PORT: '8000'
       PRODUCTS_SERVICE_ADDR: 'products:9090'
+      USERS_SERVICE_ADDR: 'users:9091'
+      JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
       FRONTEND_ORIGIN: 'http://localhost:5173'
     ports:
       - '8000:8000'
